@@ -35,7 +35,68 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --color-oat: #FAF8F5;
+      --color-cream: #F4ECE4;
+      --color-sand: #E6DDD2;
+      --color-espresso: #231B16;
+      --color-roast: #3D2D23;
+      --color-caramel: #7D614E;
+      --color-terracotta: #C86D51;
+    }
+    body {
+      font-family: 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+      background-color: var(--color-oat);
+      color: var(--color-espresso);
+      letter-spacing: 0.025em;
+      line-height: 1.75;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4 {
+      font-family: 'Noto Serif TC', serif;
+      letter-spacing: 0.035em;
+      line-height: 1.45;
+    }
+    .journal-paper {
+      background-color: #FAF8F5;
+      background-image: radial-gradient(#E8E0D5 0.75px, transparent 0.75px);
+      background-size: 16px 16px;
+    }
+    .cafe-card {
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, border-color 0.2s ease;
+    }
+    .cafe-card:hover {
+      transform: translateY(-4px) rotate(-0.3deg);
+      box-shadow: 0 16px 28px -10px rgba(35, 27, 22, 0.12);
+      border-color: var(--color-terracotta);
+    }
+    @keyframes greenPulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .pulse-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 9999px;
+      background-color: #10B981;
+      animation: greenPulse 2s infinite;
+    }
+    .modal-backdrop {
+      background-color: rgba(35, 27, 22, 0.65);
+      backdrop-filter: blur(4px);
+    }
+    .modal-box {
+      animation: modalFadeIn 0.16s ease-out forwards;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
 </head>
 <body class="bg-oat journal-paper text-espresso min-h-screen flex flex-col antialiased selection:bg-sand selection:text-espresso">
 
@@ -1187,7 +1248,7 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
             <div>
               <div class="flex items-center justify-between gap-2 mb-2 text-[13px]">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold ${status.color}">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold ${status.color}">
                     ${status.isOpenNow ? '<span class="pulse-dot"></span>' : ''}
                     <span>${status.label}</span>
                   </span>
@@ -1196,11 +1257,12 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
                 <div class="flex items-center gap-2">
                   <span class="text-caramel font-semibold">${cafe.price}</span>
                   <button 
-                    onclick="toggleFavorite(event, '${cafe.id}')" 
-                    class="w-7 h-7 rounded-lg text-caramel hover:text-terracotta hover:bg-cream flex items-center justify-center transition"
+                    type="button"
+                    onclick="handleCardFavClick(event, '${cafe.id}')" 
+                    class="w-8 h-8 rounded-lg text-caramel hover:text-terracotta hover:bg-cream flex items-center justify-center transition active:scale-90"
                     title="${isFav ? '取消收藏' : '加入口袋'}"
                   >
-                    <i class="${isFav ? 'fa-solid text-terracotta' : 'fa-regular'} fa-bookmark"></i>
+                    <i class="${isFav ? 'fa-solid text-terracotta text-base' : 'fa-regular text-base'} fa-bookmark"></i>
                   </button>
                 </div>
               </div>
@@ -1256,6 +1318,133 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
       }).join('');
     }
 
+    // 獨立口袋名單邏輯 (完全杜絕外部依賴失效問題)
+    let favorites = JSON.parse(localStorage.getItem('cafe_notes_favs') || '[]');
+
+    function handleCardFavClick(e, cafeId) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      toggleFavorite(cafeId);
+    }
+
+    function toggleFavorite(cafeId) {
+      const idx = favorites.indexOf(cafeId);
+      if (idx > -1) {
+        favorites.splice(idx, 1);
+        showToast('已自口袋名單移除');
+      } else {
+        favorites.push(cafeId);
+        showToast('已加入口袋名單');
+      }
+      localStorage.setItem('cafe_notes_favs', JSON.stringify(favorites));
+      updateFavUI();
+      applyFilters();
+    }
+
+    function updateFavUI() {
+      const badge = document.getElementById('favBadge');
+      const drawerCount = document.getElementById('drawerFavCount');
+      if (badge) {
+        if (favorites.length > 0) {
+          badge.textContent = favorites.length;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      }
+      if (drawerCount) {
+        drawerCount.textContent = favorites.length;
+      }
+      renderFavDrawerList();
+      updateModalFavButton();
+    }
+
+    function toggleFavDrawer(show) {
+      const drawer = document.getElementById('favDrawer');
+      if (!drawer) return;
+      if (show) {
+        updateFavUI();
+        drawer.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      } else {
+        drawer.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+    }
+
+    function renderFavDrawerList() {
+      const container = document.getElementById('favDrawerList');
+      if (!container) return;
+      const favList = cafes.filter(c => favorites.includes(c.id));
+      if (favList.length === 0) {
+        container.innerHTML = `
+          <div class="py-12 text-center text-caramel">
+            <i class="fa-regular fa-bookmark text-2xl mb-2 opacity-50 block"></i>
+            <p class="text-[13px]">口袋空空如也，快點擊咖啡卡片書籤進行收藏！</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = favList.map(cafe => `
+        <div class="py-3 flex items-center justify-between gap-3">
+          <div class="cursor-pointer flex-1" onclick="openDetailModal('${cafe.id}'); toggleFavDrawer(false);">
+            <h4 class="font-bold text-[15px] text-espresso hover:text-terracotta leading-snug">${cafe.mainTitle}</h4>
+            <div class="text-[13px] text-caramel flex items-center gap-2 mt-0.5">
+              <span>${cafe.region}</span>
+              <span>•</span>
+              <span>${cafe.hours}</span>
+            </div>
+          </div>
+          <button onclick="toggleFavorite('${cafe.id}')" class="text-caramel hover:text-red-600 p-1.5" title="移除">
+            <i class="fa-solid fa-trash-can text-sm"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function copyAllFavNames() {
+      const favList = cafes.filter(c => favorites.includes(c.id));
+      if (favList.length === 0) {
+        showToast('口袋名單目前沒有店家');
+        return;
+      }
+      const text = favList.map((c, i) => `${i + 1}. ${c.fullName} (${c.region})`).join('\n');
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch(e){}
+      document.body.removeChild(ta);
+      showToast('已複製收藏清單文字');
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      if (!toast || !toastMsg) return;
+      toastMsg.textContent = msg;
+      toast.classList.remove('translate-y-16', 'opacity-0');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('translate-y-16', 'opacity-0');
+      }, 2200);
+    }
+
+    function updateModalFavButton() {
+      if (!currentDetailCafe) return;
+      const isFav = favorites.includes(currentDetailCafe.id);
+      const btn = document.getElementById('modalFavBtn');
+      if (!btn) return;
+      btn.onclick = () => toggleFavorite(currentDetailCafe.id);
+      btn.innerHTML = isFav 
+        ? `<i class="fa-solid fa-bookmark text-terracotta"></i> <span>已在口袋</span>` 
+        : `<i class="fa-regular fa-bookmark"></i> <span>加入口袋</span>`;
+    }
+
     function openDetailModal(cafeId) {
       const cafe = cafes.find(c => c.id === cafeId);
       if (!cafe) return;
@@ -1309,17 +1498,6 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
       if (e.target.id === 'detailModal') {
         closeDetailModal();
       }
-    }
-
-    function updateModalFavButton() {
-      if (!currentDetailCafe) return;
-      const isFav = (typeof favorites !== 'undefined' ? favorites : []).includes(currentDetailCafe.id);
-      const btn = document.getElementById('modalFavBtn');
-      if (!btn) return;
-      btn.onclick = () => toggleFavorite(null, currentDetailCafe.id);
-      btn.innerHTML = isFav 
-        ? `<i class="fa-solid fa-bookmark text-terracotta"></i> <span>已在口袋</span>` 
-        : `<i class="fa-regular fa-bookmark"></i> <span>加入口袋</span>`;
     }
   </script>
 </body>
