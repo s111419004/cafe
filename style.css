@@ -1,0 +1,10 @@
+body { font-family: 'Noto Sans TC', sans-serif; background-color: #FAF8F5; color: #231B16; }
+.journal-paper { background-color: #FAF8F5; background-image: radial-gradient(#E8E0D5 0.75px, transparent 0.75px); background-size: 16px 16px; }
+.cafe-card { transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, border-color 0.2s ease; }
+.cafe-card:hover { transform: translateY(-4px) rotate(-0.3deg); box-shadow: 0 16px 28px -10px rgba(35, 27, 22, 0.12); border-color: #C86D51; }
+@keyframes greenPulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+.pulse-dot { display: inline-block; width: 8px; height: 8px; border-radius: 9999px; background-color: #10B981; animation: greenPulse 2s infinite; }
+@keyframes diceWobble { 0% { transform: rotate(0deg) scale(1); } 20% { transform: rotate(-18deg) scale(1.15) translateY(-3px); } 40% { transform: rotate(16deg) scale(1.15) translateY(2px); } 60% { transform: rotate(-10deg) scale(1.08) translateY(-2px); } 80% { transform: rotate(8deg) scale(1.04) translateY(1px); } 100% { transform: rotate(0deg) scale(1) translateY(0); } }
+.animate-shake-dice { animation: diceWobble 0.5s ease-in-out; }
+@keyframes cardRumble { 0% { opacity: 0.6; transform: scale(0.98) translateY(2px); } 50% { opacity: 0.85; transform: scale(0.99) translateY(-1px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+.animate-rumble-card { animation: cardRumble 0.38s ease-out; }
