@@ -911,6 +911,20 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
       rollRandomCafe(true);
     }
 
+    // 內建獨立 Toast 避免依賴外部 main.js 報錯
+    let rToastTimer = null;
+    function showRandomToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      if (!toast || !toastMsg) return;
+      toastMsg.textContent = msg;
+      toast.classList.remove('translate-y-16', 'opacity-0');
+      clearTimeout(rToastTimer);
+      rToastTimer = setTimeout(() => {
+        toast.classList.add('translate-y-16', 'opacity-0');
+      }, 2200);
+    }
+
     function rollRandomCafe(triggerAnimation = true) {
       let pool = cafes.filter(c => !c.isClosedPermanent && !c.isClosedTemp);
 
@@ -919,7 +933,7 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
         if (openPool.length > 0) {
           pool = openPool;
         } else {
-          showToast('當前多數店家已打烊，為您自全部名單抽選');
+          showRandomToast('當前多數店家已打烊，為您自全部名單抽選');
         }
       }
 
@@ -928,9 +942,9 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
       const diceBox = document.getElementById('diceBox');
       const randomCard = document.getElementById('randomCard');
 
-      if (triggerAnimation) {
+      if (triggerAnimation && diceBox) {
         diceBox.classList.remove('animate-shake-dice');
-        randomCard.classList.remove('animate-rumble-card');
+        if (randomCard) randomCard.classList.remove('animate-rumble-card');
         void diceBox.offsetWidth;
         diceBox.classList.add('animate-shake-dice');
       }
@@ -939,35 +953,51 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
         const picked = pool[Math.floor(Math.random() * pool.length)];
         const status = getCafeRealtimeStatus(picked);
 
-        document.getElementById('rStatus').textContent = status.label;
-        document.getElementById('rStatus').className = `text-[13px] font-bold px-2.5 py-0.5 rounded ${status.color}`;
-        document.getElementById('rRegion').textContent = picked.region;
-        document.getElementById('rPrice').textContent = picked.price;
+        const rStatus = document.getElementById('rStatus');
+        if (rStatus) {
+          rStatus.textContent = status.label;
+          rStatus.className = `text-[13px] font-bold px-2.5 py-0.5 rounded ${status.color}`;
+        }
+        const rRegion = document.getElementById('rRegion');
+        if (rRegion) rRegion.textContent = picked.region;
+        const rPrice = document.getElementById('rPrice');
+        if (rPrice) rPrice.textContent = picked.price;
 
-        document.getElementById('rMainTitle').textContent = picked.mainTitle;
+        const rMainTitle = document.getElementById('rMainTitle');
+        if (rMainTitle) rMainTitle.textContent = picked.mainTitle;
         const subElem = document.getElementById('rSubTitle');
-        if (picked.subTitle) {
-          subElem.textContent = picked.subTitle;
-          subElem.classList.remove('hidden');
-        } else {
-          subElem.textContent = '';
-          subElem.classList.add('hidden');
+        if (subElem) {
+          if (picked.subTitle) {
+            subElem.textContent = picked.subTitle;
+            subElem.classList.remove('hidden');
+          } else {
+            subElem.textContent = '';
+            subElem.classList.add('hidden');
+          }
         }
 
-        document.getElementById('rHours').textContent = picked.hours;
-        document.getElementById('rNotes').textContent = picked.notes;
-        document.getElementById('rSocket').textContent = picked.socketDesc;
-        document.getElementById('rTime').textContent = picked.timeDesc;
+        const rHours = document.getElementById('rHours');
+        if (rHours) rHours.textContent = picked.hours;
+        const rNotes = document.getElementById('rNotes');
+        if (rNotes) rNotes.textContent = picked.notes;
+        const rSocket = document.getElementById('rSocket');
+        if (rSocket) rSocket.textContent = picked.socketDesc;
+        const rTime = document.getElementById('rTime');
+        if (rTime) rTime.textContent = picked.timeDesc;
 
         const badgesContainer = document.getElementById('rBadges');
-        badgesContainer.innerHTML = picked.tags.map(t => `
-          <span class="px-2.5 py-1 rounded bg-cream text-espresso font-medium">#${t}</span>
-        `).join('');
+        if (badgesContainer) {
+          badgesContainer.innerHTML = (picked.tags || []).map(t => `
+            <span class="px-2.5 py-1 rounded bg-cream text-espresso font-medium">#${t}</span>
+          `).join('');
+        }
 
         const mapBtn = document.getElementById('rMapBtn');
-        mapBtn.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(picked.fullName)}`;
+        if (mapBtn) {
+          mapBtn.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(picked.fullName)}`;
+        }
 
-        if (triggerAnimation) {
+        if (triggerAnimation && randomCard) {
           randomCard.classList.add('animate-rumble-card');
         }
       }, triggerAnimation ? 260 : 0);
