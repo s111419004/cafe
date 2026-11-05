@@ -35,7 +35,55 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --color-oat: #FAF8F5;
+      --color-cream: #F4ECE4;
+      --color-sand: #E6DDD2;
+      --color-espresso: #231B16;
+      --color-roast: #3D2D23;
+      --color-caramel: #7D614E;
+      --color-terracotta: #C86D51;
+    }
+    body {
+      font-family: 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+      background-color: var(--color-oat);
+      color: var(--color-espresso);
+      letter-spacing: 0.025em;
+      line-height: 1.75;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4 {
+      font-family: 'Noto Serif TC', serif;
+      letter-spacing: 0.035em;
+      line-height: 1.45;
+    }
+    .journal-paper {
+      background-color: #FAF8F5;
+      background-image: radial-gradient(#E8E0D5 0.75px, transparent 0.75px);
+      background-size: 16px 16px;
+    }
+    @keyframes diceWobble {
+      0% { transform: rotate(0deg) scale(1); }
+      20% { transform: rotate(-18deg) scale(1.15) translateY(-3px); }
+      40% { transform: rotate(16deg) scale(1.15) translateY(2px); }
+      60% { transform: rotate(-10deg) scale(1.08) translateY(-2px); }
+      80% { transform: rotate(8deg) scale(1.04) translateY(1px); }
+      100% { transform: rotate(0deg) scale(1) translateY(0); }
+    }
+    .animate-shake-dice {
+      animation: diceWobble 0.5s ease-in-out;
+    }
+    @keyframes cardRumble {
+      0% { opacity: 0.6; transform: scale(0.98) translateY(2px); }
+      50% { opacity: 0.85; transform: scale(0.99) translateY(-1px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-rumble-card {
+      animation: cardRumble 0.38s ease-out;
+    }
+  </style>
 </head>
 <body class="bg-oat journal-paper text-espresso min-h-screen flex flex-col antialiased selection:bg-sand selection:text-espresso">
 
@@ -880,16 +928,20 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
       }
     }
 
-    // 全域覆蓋確保資料存在
     window.getParsedCafes = function() { return parseInlineCafes(); };
     window.getCafeRealtimeStatus = function(c) { return calculateRealtimeStatus(c); };
 
     let cafes = [];
     let currentPickMode = 'open';
+    let favorites = JSON.parse(localStorage.getItem('cafe_notes_favs') || '[]');
 
     document.addEventListener('DOMContentLoaded', () => {
       cafes = getParsedCafes();
-      rollRandomCafe(false);
+      updateFavUI();
+      // 一載入頁面直接隨機抽一間！
+      setTimeout(() => {
+        rollRandomCafe(false);
+      }, 50);
     });
 
     function setPickMode(mode) {
@@ -911,9 +963,8 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
       rollRandomCafe(true);
     }
 
-    // 內建獨立 Toast 避免依賴外部 main.js 報錯
     let rToastTimer = null;
-    function showRandomToast(msg) {
+    function showToast(msg) {
       const toast = document.getElementById('toast');
       const toastMsg = document.getElementById('toastMsg');
       if (!toast || !toastMsg) return;
@@ -925,7 +976,94 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
       }, 2200);
     }
 
+    function updateFavUI() {
+      const badge = document.getElementById('favBadge');
+      const drawerCount = document.getElementById('drawerFavCount');
+      if (badge) {
+        if (favorites.length > 0) {
+          badge.textContent = favorites.length;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      }
+      if (drawerCount) drawerCount.textContent = favorites.length;
+      renderFavDrawerList();
+    }
+
+    function toggleFavDrawer(show) {
+      const drawer = document.getElementById('favDrawer');
+      if (!drawer) return;
+      if (show) {
+        updateFavUI();
+        drawer.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      } else {
+        drawer.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+    }
+
+    function renderFavDrawerList() {
+      const container = document.getElementById('favDrawerList');
+      if (!container) return;
+      const favList = cafes.filter(c => favorites.includes(c.id));
+      if (favList.length === 0) {
+        container.innerHTML = `
+          <div class="py-12 text-center text-caramel">
+            <i class="fa-regular fa-bookmark text-2xl mb-2 opacity-50 block"></i>
+            <p class="text-[13px]">口袋空空如也，快點擊咖啡卡片書籤進行收藏！</p>
+          </div>
+        `;
+        return;
+      }
+      container.innerHTML = favList.map(cafe => `
+        <div class="py-3 flex items-center justify-between gap-3">
+          <div class="flex-1">
+            <h4 class="font-bold text-[15px] text-espresso leading-snug">${cafe.mainTitle}</h4>
+            <div class="text-[13px] text-caramel flex items-center gap-2 mt-0.5">
+              <span>${cafe.region}</span>
+              <span>•</span>
+              <span>${cafe.hours}</span>
+            </div>
+          </div>
+          <button onclick="removeFav('${cafe.id}')" class="text-caramel hover:text-red-600 p-1.5" title="移除">
+            <i class="fa-solid fa-trash-can text-sm"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function removeFav(id) {
+      const idx = favorites.indexOf(id);
+      if (idx > -1) {
+        favorites.splice(idx, 1);
+        localStorage.setItem('cafe_notes_favs', JSON.stringify(favorites));
+        updateFavUI();
+        showToast('已自口袋名單移除');
+      }
+    }
+
+    function copyAllFavNames() {
+      const favList = cafes.filter(c => favorites.includes(c.id));
+      if (favList.length === 0) {
+        showToast('口袋名單目前沒有店家');
+        return;
+      }
+      const text = favList.map((c, i) => `${i + 1}. ${c.fullName} (${c.region})`).join('\n');
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch(e){}
+      document.body.removeChild(ta);
+      showToast('已複製收藏清單文字');
+    }
+
     function rollRandomCafe(triggerAnimation = true) {
+      if (!cafes || cafes.length === 0) {
+        cafes = getParsedCafes();
+      }
       let pool = cafes.filter(c => !c.isClosedPermanent && !c.isClosedTemp);
 
       if (currentPickMode === 'open') {
@@ -933,7 +1071,7 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
         if (openPool.length > 0) {
           pool = openPool;
         } else {
-          showRandomToast('當前多數店家已打烊，為您自全部名單抽選');
+          showToast('當前多數店家已打烊，為您自全部名單抽選');
         }
       }
 
@@ -949,7 +1087,7 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
         diceBox.classList.add('animate-shake-dice');
       }
 
-      setTimeout(() => {
+      const applyData = () => {
         const picked = pool[Math.floor(Math.random() * pool.length)];
         const status = getCafeRealtimeStatus(picked);
 
@@ -1000,7 +1138,13 @@ ALL DAY ROASTING COMPANY | $200-400 咖啡店 | 10:00-18:00 | 民生社區挑高
         if (triggerAnimation && randomCard) {
           randomCard.classList.add('animate-rumble-card');
         }
-      }, triggerAnimation ? 260 : 0);
+      };
+
+      if (triggerAnimation) {
+        setTimeout(applyData, 260);
+      } else {
+        applyData();
+      }
     }
   </script>
 </body>
